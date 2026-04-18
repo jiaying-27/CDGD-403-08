@@ -46,6 +46,7 @@ export default function BallpitStage() {
           colors={homeBallColors}
           count={100}
           followCursor={false}
+          interactive={false}
           friction={1}
           gravity={0.01}
           wallBounce={0.95}

@@ -669,24 +669,27 @@ function createBallpit(e, t = {}) {
   const o = new w(new a(0, 0, 1), 0);
   const r = new a();
   let c = false;
+  const interactive = t.interactive ?? true;
 
-  e.style.touchAction = 'none';
+  e.style.touchAction = interactive ? 'none' : 'auto';
   e.style.userSelect = 'none';
   e.style.webkitUserSelect = 'none';
 
-  const h = S({
-    domElement: e,
-    onMove() {
-      n.setFromCamera(h.nPosition, i.camera);
-      i.camera.getWorldDirection(o.normal);
-      n.ray.intersectPlane(o, r);
-      s.physics.center.copy(r);
-      s.config.controlSphere0 = true;
-    },
-    onLeave() {
-      s.config.controlSphere0 = false;
-    }
-  });
+  const h = interactive
+    ? S({
+        domElement: e,
+        onMove() {
+          n.setFromCamera(h.nPosition, i.camera);
+          i.camera.getWorldDirection(o.normal);
+          n.ray.intersectPlane(o, r);
+          s.physics.center.copy(r);
+          s.config.controlSphere0 = true;
+        },
+        onLeave() {
+          s.config.controlSphere0 = false;
+        }
+      })
+    : null;
   function initialize(e) {
     if (s) {
       i.clear();
@@ -714,13 +717,13 @@ function createBallpit(e, t = {}) {
       c = !c;
     },
     dispose() {
-      h.dispose();
+      h?.dispose();
       i.dispose();
     }
   };
 }
 
-const Ballpit = ({ className = '', followCursor = true, ...props }) => {
+const Ballpit = ({ className = '', followCursor = true, interactive = true, ...props }) => {
   const canvasRef = useRef(null);
   const spheresInstanceRef = useRef(null);
 
@@ -728,7 +731,7 @@ const Ballpit = ({ className = '', followCursor = true, ...props }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    spheresInstanceRef.current = createBallpit(canvas, { followCursor, ...props });
+    spheresInstanceRef.current = createBallpit(canvas, { followCursor, interactive, ...props });
 
     return () => {
       if (spheresInstanceRef.current) {
