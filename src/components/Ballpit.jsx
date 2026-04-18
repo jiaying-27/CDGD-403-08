@@ -723,7 +723,18 @@ function createBallpit(e, t = {}) {
   };
 }
 
-const Ballpit = ({ className = '', followCursor = true, interactive = true, ...props }) => {
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+const Ballpit = ({
+  className = '',
+  followCursor = true,
+  interactive = true,
+  interactionMode = 'pointer',
+  motionEnabled = false,
+  ...props
+}) => {
   const canvasRef = useRef(null);
   const spheresInstanceRef = useRef(null);
 
@@ -731,7 +742,11 @@ const Ballpit = ({ className = '', followCursor = true, interactive = true, ...p
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    spheresInstanceRef.current = createBallpit(canvas, { followCursor, interactive, ...props });
+    spheresInstanceRef.current = createBallpit(canvas, {
+      followCursor,
+      interactive: interactive && interactionMode === 'pointer',
+      ...props
+    });
 
     return () => {
       if (spheresInstanceRef.current) {
@@ -740,6 +755,48 @@ const Ballpit = ({ className = '', followCursor = true, interactive = true, ...p
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (interactionMode !== 'orientation' || !motionEnabled || typeof window === 'undefined') {
+      if (spheresInstanceRef.current?.spheres) {
+        spheresInstanceRef.current.spheres.config.controlSphere0 = false;
+      }
+      return;
+    }
+
+    const instance = spheresInstanceRef.current;
+    if (!instance?.spheres) return;
+
+    let baselineBeta = null;
+    let baselineGamma = null;
+
+    function handleOrientation(event) {
+      if (event.beta == null || event.gamma == null) return;
+
+      if (baselineBeta == null || baselineGamma == null) {
+        baselineBeta = event.beta;
+        baselineGamma = event.gamma;
+      }
+
+      const deltaBeta = clamp(event.beta - baselineBeta, -35, 35);
+      const deltaGamma = clamp(event.gamma - baselineGamma, -35, 35);
+      const maxX = instance.three.size.wWidth * 0.32;
+      const maxY = instance.three.size.wHeight * 0.24;
+
+      instance.spheres.physics.center.set((deltaGamma / 35) * maxX, (-deltaBeta / 35) * maxY, 0);
+      instance.spheres.config.controlSphere0 = true;
+    }
+
+    window.addEventListener('deviceorientation', handleOrientation, true);
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation, true);
+
+      if (instance?.spheres) {
+        instance.spheres.config.controlSphere0 = false;
+      }
+    };
+  }, [interactionMode, motionEnabled]);
 
   return <canvas className={className} ref={canvasRef} style={{ width: '100%', height: '100%' }} />;
 };
